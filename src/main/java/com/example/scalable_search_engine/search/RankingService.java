@@ -1,23 +1,22 @@
 package com.example.scalable_search_engine.search;
 
-import com.example.scalable_search_engine.entity.Document;
-import com.example.scalable_search_engine.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class RankingService {
 
-    private final DocumentRepository documentRepository;
+    private final InvertedIndex invertedIndex;
 
-    public RankingService(DocumentRepository documentRepository) {
-        this.documentRepository = documentRepository;
+    public RankingService(InvertedIndex invertedIndex) {
+        this.invertedIndex = invertedIndex;
     }
 
-    public int calculateTermFrequency(
-            String text,
-            String term) {
+    /**
+     * Calculate Term Frequency (TF)
+     *
+     * TF = number of times the term appears in the document
+     */
+    public int calculateTermFrequency(String text, String term) {
 
         if (text == null || text.isBlank()) {
             return 0;
@@ -32,10 +31,7 @@ public class RankingService {
 
         for (String word : words) {
 
-            word = word.replaceAll(
-                    "[^a-z0-9]",
-                    ""
-            );
+            word = word.replaceAll("[^a-z0-9]", "");
 
             if (word.equals(lowerTerm)) {
                 count++;
@@ -45,34 +41,22 @@ public class RankingService {
         return count;
     }
 
+    /**
+     * Calculate Inverse Document Frequency (IDF)
+     *
+     * IDF = log(totalDocuments / documentsContainingTerm)
+     */
     public double calculateInverseDocumentFrequency(
-            String term) {
-
-        // Total number of documents
-        long totalDocuments =
-                documentRepository.count();
+            String term,
+            long totalDocuments) {
 
         if (totalDocuments == 0) {
             return 0.0;
         }
 
-        // Number of documents containing the term
-        List<Document> documents =
-                documentRepository.findAll();
-
-        long documentsContainingTerm = 0;
-
-        for (Document document : documents) {
-
-            String text =
-                    document.getTitle()
-                            + " "
-                            + document.getContent();
-
-            if (calculateTermFrequency(text, term) > 0) {
-                documentsContainingTerm++;
-            }
-        }
+        // Get posting list from inverted index
+        int documentsContainingTerm =
+                invertedIndex.search(term).size();
 
         if (documentsContainingTerm == 0) {
             return 0.0;
@@ -82,5 +66,24 @@ public class RankingService {
                 (double) totalDocuments
                         / documentsContainingTerm
         );
+    }
+
+    /**
+     * Calculate TF-IDF score
+     */
+    public double calculateTfIdf(
+            String text,
+            String term,
+            long totalDocuments) {
+
+        int tf = calculateTermFrequency(text, term);
+
+        double idf =
+                calculateInverseDocumentFrequency(
+                        term,
+                        totalDocuments
+                );
+
+        return tf * idf;
     }
 }

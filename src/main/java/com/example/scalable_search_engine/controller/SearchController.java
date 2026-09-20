@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.scalable_search_engine.search.SearchResult;
 
 import java.util.List;
 
@@ -20,10 +21,15 @@ public class SearchController {
     }
 
     @GetMapping
-    public List<Document> search(
+    public List<SearchResult> search(
             @RequestParam String q,
-            @RequestParam(defaultValue = "AND") String mode) {
+            @RequestParam(defaultValue = "AND") String mode,
+            @RequestParam(defaultValue = "10") int limit) {
 
-        return searchService.search(q, mode);
+        return searchService.search(
+                q,
+                mode,
+                limit
+        );
     }
 }
